@@ -1,0 +1,251 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background-color: lightsteelblue; /* สีพื้นหลังของข้อความที่ถูกเลือก */
+  color: black; /* เปลี่ยนสีตัวอักษร */
+}
+
+#root{
+  height: 100vh;
+  width: 75%;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  align-items: start;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  color: white;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+.content{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  height: 70%;
+  width: 100%;
+}
+
+.convert{
+  font-family: monospace;
+  line-height: 1.2;
+  background-color: black;
+  border-width: 1px;
+  border-style: solid;
+  /* border-color: light-dark(rgb(118, 118, 118), rgb(133, 133, 133)); */
+  border-image: initial;
+  text-align: start; 
+  overflow-y: auto;
+}
+
+.convert p {
+  margin: 0;
+  padding: 5px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.convert:has(p.selected) {
+  outline: -webkit-focus-ring-color auto 1px;
+}
+
+.convert p:hover {
+  background-color: cornsilk;
+  color: gray;
+}
+
+button.p-2{
+  margin:2px
+}
+
+textarea{
+  height: 100%;;
+  width: 100%;
+  background-color: black; 
+}
+
+textarea:not(:placeholder-shown){
+  padding: 15px;
+}
+
+textarea,.convert{
+  font-size: 16px;
+  color: lightslategrey;
+  height: 100%;
+  padding: 10px;
+  border-radius: 13px;
+  resize: none;
+}
+
+.input,.convert {
+  height: 90%;
+  width: 100%;  
+  margin: 20px 0px;
+}
+
+/* ปรับขนาด scrollbar (เฉพาะ Chrome, Edge) */
+textarea::-webkit-scrollbar,.convert::-webkit-scrollbar {
+  width: 6px; /* ปรับขนาดแถบเลื่อนให้เล็กลง */
+  display: none;
+}
+
+.selected {
+  background-color: rgba(0, 123, 255, 0.2); /* สีพื้นหลังของพารากราฟที่เลือก */
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+  background: black;
+  width: 40%;
+  padding: 20px 10%; 
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content{
+  outline: -webkit-focus-ring-color auto 1px;
+}
+
+.modal-content h2{
+  margin-top: 0px;
+  margin-bottom: 20px;
+}
+
+.modal-content ul{
+  text-align: start;
+  margin-bottom: 20px;
+  list-style-position: outside; /* ให้อยู่ด้านนอก */
+  padding-left: 20px; /* ระยะห่างจากขอบ */
+}
+
+ul li{
+  padding: 2px;
+}
+
+li::marker {
+  content: "✧ ";
+  font-size: 1.2em;
+}
+
+/* สไตล์สำหรับ <select> */
+select {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 8px 6px;
+  background: black;
+  color: white;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+  width: 100%;
+  cursor: pointer;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+/* เมื่อ hover เพื่อเพิ่ม effect */
+select:hover {
+  border-color: bisque;
+  background-color: black;
+}
+
+/* สไตล์เมื่อเลือก option */
+select:focus {
+  border-color: #4b6cb7;
+  background-color: black;
+  box-shadow: 0 0 0 2px rgba(75, 108, 183, 0.3);
+}
+
+/* เปลี่ยนสี text ใน <option> */
+option {
+  font-family: Arial, sans-serif;
+  padding: 10px;
+  width: 100%;
+  background-color: #ffffff;
+  color: #333;
+}
+
+option:hover {
+  background-color: #555555; /* สีพื้นหลังเมื่อ hover */
+  color: #ffffff; /* เปลี่ยนสีข้อความเมื่อ hover */
+}
+
+@media only screen and (max-width: 768px) {
+  
+  #root{
+    width: 100%;
+  }
+  .modal-content{
+    width: 75%;
+    padding: 20px 20%;
+  }
+}
+
+@media only screen and (max-width: 600px) {
+  #root{
+    width: 100%;
+  }
+  .modal-content{
+    width: 75%;
+    padding: 20px 15%;
+  }
+}
