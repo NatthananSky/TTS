@@ -17,12 +17,13 @@ import {
 function App() {
   const [voices, setVoices] = useState([]);
   const [loaded, setLoaded] = useState(false);
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
+  const textareaRef = useRef(null);
   const [speaking, setSpeaking] = useState(false);
   const [voice, setVoice] = useState([]);
   const [volume, setVolume] = useState(1);
   const [rate, setRate] = useState(1.35);
-  const [start, setStart] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const [selection, setSelection] = useState([]);
   const [currentSelectionIndex, setCurrentSelectionIndex] = useState(-1);
   const [convert, setConvert] = useState(null);
@@ -39,11 +40,11 @@ function App() {
     const stopSpeakingOnRefresh = () => {
       window.speechSynthesis.cancel();
     };
-  
-    window.addEventListener('beforeunload', stopSpeakingOnRefresh);
-  
+
+    window.addEventListener("beforeunload", stopSpeakingOnRefresh);
+
     return () => {
-      window.removeEventListener('beforeunload', stopSpeakingOnRefresh);
+      window.removeEventListener("beforeunload", stopSpeakingOnRefresh);
     };
   }, []);
 
@@ -52,16 +53,26 @@ function App() {
     rateRef.current = rate;
     volumeRef.current = volume;
   }, [voice, rate, volume]);
-  
+
+  useEffect(() => {
+    setSpeaking(window.speechSynthesis.speaking);
+  }, []);
+
   const togglePlay = () => {
     if (speaking) {
-      window.speechSynthesis.pause();
+      if (playing) {
+        window.speechSynthesis.pause();
+        setPlaying(false);
+      } else {
+        window.speechSynthesis.resume();
+        setPlaying(true);
+      }
     } else {
-      window.speechSynthesis.resume();
+      speak();
+      setPlaying(true);
     }
-    setSpeaking(!speaking);
   };
-  
+
   const speak = () => {
     window.speechSynthesis.cancel();
     const newUtterance = new SpeechSynthesisUtterance();
@@ -70,18 +81,16 @@ function App() {
       console.warn("ไม่มีข้อความให้อ่าน");
       return;
     }
-    
+
     if (selection.length > 0) {
       const sortedSelection = [...selection].sort((a, b) => a.index - b.index);
-      const selectedText = sortedSelection
-      .map((item) => item.text)
-      .join(" ");
+      const selectedText = sortedSelection.map((item) => item.text).join(" ");
       newUtterance.text = formatText(selectedText);
     } else if (Array.isArray(convert) && convert.length > 0) {
       const readText = convert.join(" ");
       newUtterance.text = formatText(readText);
     }
-    
+
     newUtterance.voice = voiceRef.current;
     newUtterance.lang = "th-TH";
     newUtterance.rate = rateRef.current;
@@ -89,28 +98,27 @@ function App() {
 
     newUtterance.onstart = () => {
       setSpeaking(true);
-      setStart(true);
     };
 
     newUtterance.onend = () => {
       setSpeaking(false);
-      setStart(false);
+      setPlaying(false);
       setUtterance(null); // เคลียร์ออกจาก state
     };
-    
+
     setUtterance(newUtterance); // เซฟใหม่ (หากต้องใช้ภายหลัง)
     window.speechSynthesis.speak(newUtterance);
   };
 
   const cancel = () => {
     window.speechSynthesis.cancel();
-    setStart(false);
     setSpeaking(false);
+    setPlaying(false);
     setUtterance(null);
   };
 
   const changeVoice = (param) => {
-    setVoice(param)
+    setVoice(param);
     utterance && (utterance.voice = param);
   };
 
@@ -120,14 +128,6 @@ function App() {
 
   const changeRate = (param) => {
     setRate(param === "+" ? rate + 0.05 : rate - 0.05);
-  };
-
-  const pause = () => {
-    window.speechSynthesis.pause();
-  };
-
-  const resume = () => {
-    window.speechSynthesis.resume();
   };
 
   const formatText = (text) => {
@@ -145,15 +145,28 @@ function App() {
 
     return outputText;
   };
-  
+
   const convertText = (text) => {
     const paragraphs = text.split(/\r?\n/);
     setConvert(paragraphs);
   };
-  
+
   const handleChange = (event) => {
-    setText(event.target.value);
-    convertText(event.target.value);
+    const newText = event.target.value;
+    setText(newText);
+    convertText(newText);
+  };
+
+  const handleCaretLineChange = (e) => {
+    const textarea = e.target;
+    const caretPosition = textarea.selectionStart;
+    const textUntilCaret = textarea.value.substring(0, caretPosition);
+    const currentLine = textUntilCaret.split("\n").length - 1;
+
+    if (currentLine !== currentSelectionIndex) {
+      setCurrentSelectionIndex(currentLine);
+      handleClick(currentLine, e); // เรียกใช้ handleClick เพื่อ select พารากราฟใน div
+    }
   };
 
   // ฟังก์ชันจัดการการเลือก <p> เมื่อคลิก
@@ -161,10 +174,9 @@ function App() {
     cancel();
     setCurrentSelectionIndex(index);
     const selected = window.getSelection().toString().trim(); // ดึงข้อความที่ถูกเลือก (trim เพื่อลบช่องว่าง)
-    const newSelection = [...selection];
     console.log(selected)
+    const newSelection = [...selection];
     const selectedText = selected || convert[index]; // ถ้ามีข้อความที่เลือก ให้ใช้ข้อความนั้น ถ้าไม่มีก็ใช้ทั้งพารากราฟ
-    console.log(selectedText)
 
     const existingIndex = newSelection.findIndex(
       (item) => item.index === index
@@ -189,6 +201,13 @@ function App() {
     }
 
     setSelection(newSelection); // อัปเดต state
+
+    const selector = `.convert p[data-index="${index}"]`;
+    const selectedElement = document.querySelector(selector);
+
+    if (selectedElement) {
+      selectedElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   };
 
   //ฟังก์ชันเลื่อนไป selection ถัดไป
@@ -233,6 +252,25 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.ctrlKey) {
+        switch (event.key) {
+          case "Enter": {
+            const button = document.querySelector('[data-action="play/pause"]');
+            button?.click();
+            break;
+          }
+        }
+      }
+      if (event.ctrlKey && event.shiftKey && event.key === "Backspace") {
+        event.preventDefault()
+        setText('');
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     // โหลดเสียงเมื่อ voices เปลี่ยนแปลง
@@ -292,9 +330,12 @@ function App() {
         <div className="input">
           <textarea
             id="textarea"
+            ref={textareaRef}
             value={text}
             onInput={(e) => setIsSpellcheck(!e.target.value == "")}
             onChange={(e) => handleChange(e)}
+            onKeyUp={handleCaretLineChange} // <-- ตรงนี้
+            onClick={handleCaretLineChange} // กันเวลาเมาส์คลิกเปลี่ยนตำแหน่ง
             rows="4"
             cols="50"
             placeholder="พิมพ์ข้อความที่นี่..."
@@ -305,11 +346,12 @@ function App() {
             ? convert.map((paragraph, index) => {
                 return (
                   <p
-                    className={
+                    className={`${
                       selection.some((item) => item.index === index)
                         ? "selected"
                         : ""
                     }
+                    `}
                     onClick={(e) => handleClick(index, e)}
                     key={index}
                     data-index={index}
@@ -333,14 +375,13 @@ function App() {
         >
           {<SkipBack size={18} />}
         </button>
-        <button className="p-2" onClick={togglePlay} title="เล่น/หยุด">
-          {speaking && text && loaded ? (
-            <Pause onClick={pause} size={28} />
-          ) : start ? (
-            <Play onClick={resume} size={28} />
-          ) : (
-            <Play onClick={speak} size={28} />
-          )}
+        <button
+          className="p-2"
+          onClick={togglePlay}
+          title="เล่น/หยุด crtl+Enter"
+          data-action="play/pause"
+        >
+          {playing && text && loaded ? <Pause size={28} /> : <Play size={28} />}
         </button>
         <button className="p-2" onClick={(e) => nextSelection(e)} title="ถัดไป">
           {<SkipForward size={18} />}
@@ -416,8 +457,8 @@ function App() {
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>รายละเอียด</h2>
               <ul>
-                <li>Status (สถานะ) : {speaking ? "กำลังเล่น" : "หยุดเล่น"}</li>
-                <li>Queue (คิว) : {start ? "อยู่ในคิว" : "คิวว่าง"}</li>
+                <li>Status (สถานะ) : {playing ? "กำลังเล่น" : "หยุดเล่น"}</li>
+                <li>Queue (คิว) : {speaking ? "อยู่ในคิว" : "คิวว่าง"}</li>
                 <li>Rate (ความเร็ว) : {rate.toFixed(2)}</li>
                 <li>Volume (ระดับเสียง) : {volume.toFixed(2)}</li>
               </ul>
