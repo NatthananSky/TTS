@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import "./App.css";
 import {
   Play,
@@ -7,6 +7,8 @@ import {
   ChevronsRight,
   ChevronsUp,
   ChevronsDown,
+  Volume2,
+  Volume1,
   SkipBack,
   SkipForward,
   CircleAlert,
@@ -31,6 +33,8 @@ function App() {
   const [noteIsOpen, setNoteIsOpen] = useState(false);
   const [detailIsOpen, setDetailIsOpen] = useState(false);
   const [utterance, setUtterance] = useState(null); // ไม่ต้องระบุประเภทข้อมูลใน JavaScript
+  const [show, setShow] = useState(null);
+  const [visible, setVisible] = useState(false);
   const voiceRef = useRef(null);
   const rateRef = useRef(1);
   const volumeRef = useRef(1);
@@ -108,6 +112,7 @@ function App() {
 
     setUtterance(newUtterance); // เซฟใหม่ (หากต้องใช้ภายหลัง)
     window.speechSynthesis.speak(newUtterance);
+    console.log(newUtterance);
   };
 
   const cancel = () => {
@@ -122,12 +127,40 @@ function App() {
     utterance && (utterance.voice = param);
   };
 
+  useEffect(() => {
+    let fadeOutTimer;
+    let hideTimer;
+
+    if (show) {
+      setVisible(true);
+
+      fadeOutTimer = setTimeout(() => setVisible(false), 1000);
+
+      hideTimer = setTimeout(() => setShow(null), 1500);
+    }
+
+    // ล้าง timeout ทุกครั้งที่ show เปลี่ยน
+    return () => {
+      clearTimeout(fadeOutTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [show]);
+
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+  const showVolume = () => setShow("volume");
+  const showRate = () => setShow("rate");
+
   const changeVolume = (param) => {
-    setVolume(param === "+" ? volume + 0.05 : volume - 0.05);
+    const newVolume = param === "+" ? volume + 0.05 : volume - 0.05;
+    setVolume(clamp(newVolume, 0.0, 1.0));
+    showVolume();
   };
 
   const changeRate = (param) => {
-    setRate(param === "+" ? rate + 0.05 : rate - 0.05);
+    const newRate = param === "+" ? rate + 0.05 : rate - 0.05;
+    setRate(clamp(newRate, 0.5, 2.0));
+    showRate();
   };
 
   const formatText = (text) => {
@@ -151,11 +184,12 @@ function App() {
     setConvert(paragraphs);
   };
 
-  const handleChange = (event) => {
-    const newText = event.target.value;
+  const handleChange = useCallback((event) => {
+    const newText = event ? event.target.value : "";
     setText(newText);
+    setIsSpellcheck(!newText == "");
     convertText(newText);
-  };
+  }, []);
 
   const handleCaretLineChange = (e) => {
     const textarea = e.target;
@@ -174,7 +208,6 @@ function App() {
     cancel();
     setCurrentSelectionIndex(index);
     const selected = window.getSelection().toString().trim(); // ดึงข้อความที่ถูกเลือก (trim เพื่อลบช่องว่าง)
-    console.log(selected)
     const newSelection = [...selection];
     const selectedText = selected || convert[index]; // ถ้ามีข้อความที่เลือก ให้ใช้ข้อความนั้น ถ้าไม่มีก็ใช้ทั้งพารากราฟ
 
@@ -264,13 +297,13 @@ function App() {
         }
       }
       if (event.ctrlKey && event.shiftKey && event.key === "Backspace") {
-        event.preventDefault()
-        setText('');
+        event.preventDefault();
+        handleChange();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-  return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleChange]);
 
   useEffect(() => {
     // โหลดเสียงเมื่อ voices เปลี่ยนแปลง
@@ -332,7 +365,6 @@ function App() {
             id="textarea"
             ref={textareaRef}
             value={text}
-            onInput={(e) => setIsSpellcheck(!e.target.value == "")}
             onChange={(e) => handleChange(e)}
             onKeyUp={handleCaretLineChange} // <-- ตรงนี้
             onClick={handleCaretLineChange} // กันเวลาเมาส์คลิกเปลี่ยนตำแหน่ง
@@ -389,21 +421,14 @@ function App() {
         <button
           className="p-2"
           onClick={() => changeRate("-")}
-          title="เพิ่มความเร็ว"
+          title="ลดความเร็ว"
         >
-          <ChevronsLeft size={18} />
+          <ChevronsDown size={18} />
         </button>
         <button
           className="p-2"
           onClick={() => changeRate("+")}
-          title="ลดความเร็ว"
-        >
-          <ChevronsRight size={18} />
-        </button>
-        <button
-          className="p-2"
-          onClick={() => changeVolume("+")}
-          title="เพิ่มเสียง"
+          title="เพิ่มความเร็ว"
         >
           <ChevronsUp size={18} />
         </button>
@@ -412,7 +437,14 @@ function App() {
           onClick={() => changeVolume("-")}
           title="ลดเสียง"
         >
-          <ChevronsDown size={18} />
+          <Volume1 size={18} />
+        </button>
+        <button
+          className="p-2"
+          onClick={() => changeVolume("+")}
+          title="เพิ่มเสียง"
+        >
+          <Volume2 size={18} />
         </button>
         <button
           className="p-2"
@@ -460,7 +492,7 @@ function App() {
                 <li>Status (สถานะ) : {playing ? "กำลังเล่น" : "หยุดเล่น"}</li>
                 <li>Queue (คิว) : {speaking ? "อยู่ในคิว" : "คิวว่าง"}</li>
                 <li>Rate (ความเร็ว) : {rate.toFixed(2)}</li>
-                <li>Volume (ระดับเสียง) : {volume.toFixed(2)}</li>
+                <li>Volume (ระดับเสียง) : {(volume * 100).toFixed(0)}% </li>
               </ul>
               <button onClick={() => setDetailIsOpen(false)} title="ปิด">
                 <X size={18} />
@@ -469,6 +501,17 @@ function App() {
           </div>
         )}
       </div>
+      {show === "volume" && (
+        <div className={`display show ${visible ? "show" : "hide"}`}>
+          🔈 ระดับเสียง: {(volume * 100).toFixed(0)}%
+        </div>
+      )}
+
+      {show === "rate" && (
+        <div className={`display show ${visible ? "show" : "hide"}`}>
+          ⚡ ความเร็ว: {rate.toFixed(2)}x
+        </div>
+      )}
     </>
   );
 }
